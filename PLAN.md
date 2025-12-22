@@ -26,7 +26,7 @@
 ## Phase 2 — Input model + parsing
 - Define a minimal internal model for manpage content mirroring jq’s builder.
 - Implement Markdown parsing using `pulldown-cmark`, mapping tokens to the internal model.
-- Implement YAML parsing using `yaml-rust`, matching jq’s dev manual schema; extract Markdown sections and metadata.
+- Implement YAML parsing using `yaml-rust2`, matching jq’s dev manual schema; extract Markdown sections and metadata.
 - Validate YAML manuals against the embedded schema in `data/manual_schema.yml` with `jsonschema` when `--validate` is set (allow override via `--schema`).
 - Support stdin for `--input` when `-i` is `-` or absent (decide default and document).
 
