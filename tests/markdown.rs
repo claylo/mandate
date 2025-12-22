@@ -37,4 +37,5 @@ Paragraph after foo.
     assert!(roff.contains("Foo:"));
     assert!(roff.contains(".IP"));
     assert!(roff.contains("Paragraph after foo\\."));
+    assert!(roff.contains("Foo:\n.IP"));
 }

@@ -638,6 +638,7 @@ impl RoffWriter {
             if let Some(item) = items.first() {
                 self.write_list_item(item);
             }
+            self.ensure_newline();
             let mut consumed = 0;
             while let Some(Block::Paragraph(inlines)) = following.get(consumed) {
                 if matches!(following.get(consumed + 1), Some(Block::CodeBlock { .. })) {
@@ -676,6 +677,12 @@ impl RoffWriter {
         }
         if !blocks.is_empty() {
             self.write_blocks(&blocks, Some(ParentTag::ListItem));
+        }
+    }
+
+    fn ensure_newline(&mut self) {
+        if !self.output.ends_with('\n') {
+            self.output.push('\n');
         }
     }
 
