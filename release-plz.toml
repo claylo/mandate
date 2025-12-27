@@ -7,7 +7,6 @@ semver_check = false
 
 [[package]]
 name = "mandate"
-version = "0.1.0"
 changelog_path = "CHANGELOG.md"
 changelog_update = true
 git_release_enable = false

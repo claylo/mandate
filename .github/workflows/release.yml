@@ -134,6 +134,10 @@ jobs:
           mkdir -p "$out_dir"
           cargo run --locked --bin mandate -- -i docs/mandate.yml -p mandate -s 1 -t "Mandate Manual" -o "$out_dir/mandate.1"
         shell: "bash"
+      - uses: swatinem/rust-cache@v2
+        with:
+          key: ${{ join(matrix.targets, '-') }}
+          cache-provider: ${{ matrix.cache_provider }}
       - name: Install dist
         run: ${{ matrix.install_dist.run }}
       # Get the dist-manifest

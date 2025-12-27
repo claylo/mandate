@@ -43,3 +43,4 @@ tap = "claylo/homebrew-brew"
 publish-jobs = ["homebrew"]
 include = ["dist/share"]
 github-build-setup = "../dist-build-setup.yml"
+pr-run-mode = "upload"
