@@ -11,11 +11,10 @@ rules:
 
   indentation:
     spaces: 2
-    indent-sequences: false
+    indent-sequences: true
 
   line-length:
     max: 120
     level: warning
     allow-non-breakable-words: true
     allow-non-breakable-inline-mappings: true
-

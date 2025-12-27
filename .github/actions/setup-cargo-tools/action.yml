@@ -5,6 +5,10 @@ inputs:
     description: 'Space-separated list of tools to install and cache'
     required: true
     default: ''
+  binstall-tools:
+    description: 'Space-separated list of tools to install with cargo-binstall'
+    required: false
+    default: ''
   arch:
     description: 'Architecture (x86_64, aarch64, etc.)'
     required: false
@@ -28,7 +32,7 @@ runs:
           esac
         fi
         # Replace spaces with dashes for cache key
-        TOOLS_KEY=$(echo "${{ inputs.tools }}" | tr ' ' '-')
+        TOOLS_KEY=$(echo "${{ inputs.tools }} ${{ inputs.binstall-tools }}" | xargs | tr ' ' '-')
         echo "tools-key=$TOOLS_KEY" >> $GITHUB_OUTPUT
 
     - name: Cache cargo tools
@@ -36,6 +40,7 @@ runs:
       uses: actions/cache@v4
       with:
         path: ~/.cargo/bin
+        # yamllint disable-line rule:line-length
         key: ${{ runner.os }}-${{ steps.detect-arch.outputs.arch }}-cargo-tools-${{ steps.detect-arch.outputs.tools-key }}-${{ hashFiles('~/.cargo/bin/*') }}
         restore-keys: |
           ${{ runner.os }}-${{ steps.detect-arch.outputs.arch }}-cargo-tools-${{ steps.detect-arch.outputs.tools-key }}-
@@ -47,10 +52,24 @@ runs:
       if: steps.cache-cargo-tools.outputs.cache-hit != 'true'
       shell: bash
       run: |
-        # Handle space-separated tools list
+        # Handle space-separated tools lists
+        if [ -n "${{ inputs.binstall-tools }}" ]; then
+          if ! command -v cargo-binstall >/dev/null 2>&1; then
+            echo "Installing cargo-binstall..."
+            cargo install cargo-binstall || echo "Failed to install cargo-binstall"
+          fi
+
+          for tool in ${{ inputs.binstall-tools }}; do
+            if [ -n "$tool" ]; then
+              echo "Installing $tool via cargo-binstall..."
+              cargo binstall -y "$tool" || echo "Failed to install $tool"
+            fi
+          done
+        fi
+
         for tool in ${{ inputs.tools }}; do
           if [ -n "$tool" ]; then
-            echo "Installing $tool..."
+            echo "Installing $tool via cargo install..."
             cargo install "$tool" || echo "Failed to install $tool"
           fi
         done

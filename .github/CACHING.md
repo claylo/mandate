@@ -24,6 +24,9 @@ Located at:
 These mirror rust-yaml's approach and are used in CI to speed up lint, test,
 and MSRV checks.
 
+The cargo tools action supports installing tools via `cargo-binstall` for
+prebuilt binaries, alongside the standard `cargo install` path.
+
 ## Cache Keys (Summary)
 
 - **Toolchain cache**: OS + toolchain + toolchain file hash
