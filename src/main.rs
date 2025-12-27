@@ -14,7 +14,12 @@ struct Cli {
     #[arg(short = 'p', long = "program", value_name = "NAME")]
     program: String,
 
-    #[arg(short = 's', long = "section", value_name = "SECTION", default_value = "1")]
+    #[arg(
+        short = 's',
+        long = "section",
+        value_name = "SECTION",
+        default_value = "1"
+    )]
     section: String,
 
     #[arg(short = 't', long = "title", value_name = "TITLE")]

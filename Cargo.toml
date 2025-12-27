@@ -4,10 +4,42 @@ version = "0.1.0"
 edition = "2024"
 rust-version = "1.85.0"
 license = "MIT OR Apache-2.0"
+repository = "https://github.com/claylo/mandate"
+homepage = "https://github.com/claylo/mandate"
+description = "Convert Markdown or YAML manuals into roff manpages"
+
+[workspace]
+resolver = "2"
 
 [dependencies]
 clap = { version = "4.5.23", features = ["derive"] }
-pulldown-cmark = "0.11.3"
-yaml-rust = { version = "0.10", package = "yaml-rust2" }
-jsonschema = { version = "0.37.4", default-features = false }
-serde_json = "1.0"
+pulldown-cmark = "0.13.0"
+yaml-rust2 = "0.11"
+jsonschema = { version = "0.38.1", default-features = false }
+serde_json = "1.0.148"
+
+# The profile that 'dist' will build with
+[profile.dist]
+inherits = "release"
+lto = "thin"
+
+# Config for 'dist'
+[workspace.metadata.dist]
+# The preferred dist version to use in CI (Cargo.toml SemVer syntax)
+cargo-dist-version = "0.30.3"
+# CI backends to support
+ci = ["github"]
+# The installers to generate for each app
+installers = ["homebrew"]
+# Target platforms to build apps for (Rust target-triple syntax)
+targets = [
+  "x86_64-unknown-linux-gnu",
+  "aarch64-unknown-linux-gnu",
+  "x86_64-apple-darwin",
+  "x86_64-pc-windows-msvc",
+  "aarch64-apple-darwin",
+]
+tap = "claylo/homebrew-brew"
+publish-jobs = ["homebrew"]
+include = ["dist/share"]
+github-build-setup = "dist-build-setup.yml"

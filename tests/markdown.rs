@@ -1,4 +1,4 @@
-use mandate::{convert_markdown_to_roff, ManpageOptions};
+use mandate::{ManpageOptions, convert_markdown_to_roff};
 
 fn options() -> ManpageOptions {
     ManpageOptions::new("mandate", "1", "Test", None, None)

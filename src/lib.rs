@@ -13,11 +13,11 @@
 use jsonschema::validator_for;
 use pulldown_cmark::{Event, HeadingLevel, Options, Parser, Tag, TagEnd};
 use serde_json::{Map as JsonMap, Number as JsonNumber, Value as JsonValue};
-use yaml_rust::{yaml::Hash, Yaml, YamlLoader};
 use std::error::Error;
 use std::fmt;
 use std::fs;
 use std::path::Path;
+use yaml_rust2::{Yaml, YamlLoader, yaml::Hash};
 
 pub const BUILTIN_SCHEMA: &str = include_str!("../data/manual_schema.yml");
 
@@ -28,10 +28,18 @@ pub struct Document {
 
 #[derive(Debug, Clone)]
 pub enum Block {
-    Heading { level: u8, content: Vec<Inline> },
+    Heading {
+        level: u8,
+        content: Vec<Inline>,
+    },
     Paragraph(Vec<Inline>),
-    List { kind: ListKind, items: Vec<ListItem> },
-    CodeBlock { text: String },
+    List {
+        kind: ListKind,
+        items: Vec<ListItem>,
+    },
+    CodeBlock {
+        text: String,
+    },
 }
 
 #[derive(Debug, Clone)]
@@ -148,12 +156,24 @@ impl BlockContainerFrame {
 enum Frame {
     Document(BlockContainerFrame),
     BlockContainer(BlockContainerFrame),
-    List { kind: ListKind, items: Vec<ListItem> },
+    List {
+        kind: ListKind,
+        items: Vec<ListItem>,
+    },
     ListItem(BlockContainerFrame),
-    Paragraph { inlines: Vec<Inline> },
-    Heading { level: u8, inlines: Vec<Inline> },
-    Emphasis { inlines: Vec<Inline> },
-    Strong { inlines: Vec<Inline> },
+    Paragraph {
+        inlines: Vec<Inline>,
+    },
+    Heading {
+        level: u8,
+        inlines: Vec<Inline>,
+    },
+    Emphasis {
+        inlines: Vec<Inline>,
+    },
+    Strong {
+        inlines: Vec<Inline>,
+    },
     Link {
         url: String,
         title: Option<String>,
@@ -164,8 +184,12 @@ enum Frame {
         _title: Option<String>,
         inlines: Vec<Inline>,
     },
-    CodeBlock { text: String },
-    HtmlBlock { text: String },
+    CodeBlock {
+        text: String,
+    },
+    HtmlBlock {
+        text: String,
+    },
 }
 
 pub fn parse_markdown(markdown: &str) -> Result<Document> {
@@ -245,7 +269,9 @@ fn handle_start(tag: Tag<'_>, stack: &mut Vec<Frame>) -> Result<()> {
     match tag {
         Tag::Paragraph => {
             flush_pending_block_container(stack);
-            stack.push(Frame::Paragraph { inlines: Vec::new() });
+            stack.push(Frame::Paragraph {
+                inlines: Vec::new(),
+            });
         }
         Tag::Heading { level, .. } => {
             flush_pending_block_container(stack);
@@ -256,7 +282,9 @@ fn handle_start(tag: Tag<'_>, stack: &mut Vec<Frame>) -> Result<()> {
         }
         Tag::List(start) => {
             flush_pending_block_container(stack);
-            let kind = start.map_or(ListKind::Unordered, |value| ListKind::Ordered { start: value });
+            let kind = start.map_or(ListKind::Unordered, |value| ListKind::Ordered {
+                start: value,
+            });
             stack.push(Frame::List {
                 kind,
                 items: Vec::new(),
@@ -267,7 +295,9 @@ fn handle_start(tag: Tag<'_>, stack: &mut Vec<Frame>) -> Result<()> {
         }
         Tag::CodeBlock(_) => {
             flush_pending_block_container(stack);
-            stack.push(Frame::CodeBlock { text: String::new() });
+            stack.push(Frame::CodeBlock {
+                text: String::new(),
+            });
         }
         Tag::BlockQuote(_) => {
             flush_pending_block_container(stack);
@@ -275,15 +305,23 @@ fn handle_start(tag: Tag<'_>, stack: &mut Vec<Frame>) -> Result<()> {
         }
         Tag::HtmlBlock => {
             flush_pending_block_container(stack);
-            stack.push(Frame::HtmlBlock { text: String::new() });
+            stack.push(Frame::HtmlBlock {
+                text: String::new(),
+            });
         }
         Tag::Emphasis => {
-            stack.push(Frame::Emphasis { inlines: Vec::new() });
+            stack.push(Frame::Emphasis {
+                inlines: Vec::new(),
+            });
         }
         Tag::Strong => {
-            stack.push(Frame::Strong { inlines: Vec::new() });
+            stack.push(Frame::Strong {
+                inlines: Vec::new(),
+            });
         }
-        Tag::Link { dest_url, title, .. } => {
+        Tag::Link {
+            dest_url, title, ..
+        } => {
             let title = if title.is_empty() {
                 None
             } else {
@@ -295,7 +333,9 @@ fn handle_start(tag: Tag<'_>, stack: &mut Vec<Frame>) -> Result<()> {
                 inlines: Vec::new(),
             });
         }
-        Tag::Image { dest_url, title, .. } => {
+        Tag::Image {
+            dest_url, title, ..
+        } => {
             let title = if title.is_empty() {
                 None
             } else {
@@ -312,7 +352,14 @@ fn handle_start(tag: Tag<'_>, stack: &mut Vec<Frame>) -> Result<()> {
                 "tables are not supported".to_string(),
             ));
         }
-        Tag::FootnoteDefinition(_) | Tag::Strikethrough | Tag::MetadataBlock(_) => {
+        Tag::FootnoteDefinition(_)
+        | Tag::Strikethrough
+        | Tag::MetadataBlock(_)
+        | Tag::DefinitionList
+        | Tag::DefinitionListTitle
+        | Tag::DefinitionListDefinition
+        | Tag::Superscript
+        | Tag::Subscript => {
             return Err(MandateError::Markdown(
                 "unsupported markdown construct encountered".to_string(),
             ));
@@ -335,7 +382,13 @@ fn handle_end(tag_end: TagEnd, stack: &mut Vec<Frame>) -> Result<()> {
                 Some(Frame::Heading { level, inlines }) => (level, inlines),
                 _ => return Err(MandateError::Markdown("heading mismatch".to_string())),
             };
-            push_block(stack, Block::Heading { level, content: inlines })?;
+            push_block(
+                stack,
+                Block::Heading {
+                    level,
+                    content: inlines,
+                },
+            )?;
         }
         TagEnd::List(_) => {
             let (kind, items) = match stack.pop() {
@@ -352,7 +405,11 @@ fn handle_end(tag_end: TagEnd, stack: &mut Vec<Frame>) -> Result<()> {
             let list_item = ListItem { blocks };
             match stack.last_mut() {
                 Some(Frame::List { items, .. }) => items.push(list_item),
-                _ => return Err(MandateError::Markdown("list item parent mismatch".to_string())),
+                _ => {
+                    return Err(MandateError::Markdown(
+                        "list item parent mismatch".to_string(),
+                    ));
+                }
             }
         }
         TagEnd::Emphasis => {
@@ -371,7 +428,11 @@ fn handle_end(tag_end: TagEnd, stack: &mut Vec<Frame>) -> Result<()> {
         }
         TagEnd::Link => {
             let (url, title, inlines) = match stack.pop() {
-                Some(Frame::Link { url, title, inlines }) => (url, title, inlines),
+                Some(Frame::Link {
+                    url,
+                    title,
+                    inlines,
+                }) => (url, title, inlines),
                 _ => return Err(MandateError::Markdown("link mismatch".to_string())),
             };
             push_inline(
@@ -405,10 +466,14 @@ fn handle_end(tag_end: TagEnd, stack: &mut Vec<Frame>) -> Result<()> {
             };
             push_block(stack, Block::Paragraph(vec![Inline::Text(text)]))?;
         }
-        TagEnd::BlockQuote => {
+        TagEnd::BlockQuote(_) => {
             let blocks = match stack.pop() {
                 Some(Frame::BlockContainer(frame)) => frame.finish(),
-                _ => return Err(MandateError::Markdown("block container mismatch".to_string())),
+                _ => {
+                    return Err(MandateError::Markdown(
+                        "block container mismatch".to_string(),
+                    ));
+                }
             };
             for block in blocks {
                 push_block(stack, block)?;
@@ -420,7 +485,12 @@ fn handle_end(tag_end: TagEnd, stack: &mut Vec<Frame>) -> Result<()> {
         | TagEnd::TableCell
         | TagEnd::FootnoteDefinition
         | TagEnd::Strikethrough
-        | TagEnd::MetadataBlock(_) => {
+        | TagEnd::MetadataBlock(_)
+        | TagEnd::DefinitionList
+        | TagEnd::DefinitionListTitle
+        | TagEnd::DefinitionListDefinition
+        | TagEnd::Superscript
+        | TagEnd::Subscript => {
             return Err(MandateError::Markdown(
                 "unsupported markdown construct encountered".to_string(),
             ));
@@ -429,7 +499,7 @@ fn handle_end(tag_end: TagEnd, stack: &mut Vec<Frame>) -> Result<()> {
     Ok(())
 }
 
-fn push_inline(stack: &mut Vec<Frame>, inline: Inline) -> Result<()> {
+fn push_inline(stack: &mut [Frame], inline: Inline) -> Result<()> {
     match stack.last_mut() {
         Some(Frame::Paragraph { inlines })
         | Some(Frame::Heading { inlines, .. })
@@ -463,7 +533,7 @@ fn push_inline(stack: &mut Vec<Frame>, inline: Inline) -> Result<()> {
     Ok(())
 }
 
-fn push_block(stack: &mut Vec<Frame>, block: Block) -> Result<()> {
+fn push_block(stack: &mut [Frame], block: Block) -> Result<()> {
     match stack.last_mut() {
         Some(Frame::Document(frame))
         | Some(Frame::ListItem(frame))
@@ -480,7 +550,7 @@ fn push_block(stack: &mut Vec<Frame>, block: Block) -> Result<()> {
     }
 }
 
-fn flush_pending_block_container(stack: &mut Vec<Frame>) {
+fn flush_pending_block_container(stack: &mut [Frame]) {
     if let Some(Frame::Document(frame))
     | Some(Frame::ListItem(frame))
     | Some(Frame::BlockContainer(frame)) = stack.last_mut()
@@ -507,7 +577,9 @@ fn inline_text(inlines: &[Inline]) -> String {
             Inline::Text(text) | Inline::Code(text) => out.push_str(text),
             Inline::Emphasis(children)
             | Inline::Strong(children)
-            | Inline::Link { content: children, .. } => out.push_str(&inline_text(children)),
+            | Inline::Link {
+                content: children, ..
+            } => out.push_str(&inline_text(children)),
             Inline::LineBreak(LineBreak::Soft) | Inline::LineBreak(LineBreak::Hard) => {
                 out.push('\n');
             }
@@ -868,10 +940,10 @@ pub fn convert_markdown_to_roff(markdown: &str, options: &ManpageOptions) -> Res
 }
 
 pub fn convert_yaml_to_markdown(_yaml: &str) -> Result<String> {
-    let docs = YamlLoader::load_from_str(_yaml)
-        .map_err(|err| MandateError::Yaml(err.to_string()))?;
+    let docs =
+        YamlLoader::load_from_str(_yaml).map_err(|err| MandateError::Yaml(err.to_string()))?;
     let manual = docs
-        .get(0)
+        .first()
         .ok_or_else(|| MandateError::Yaml("empty yaml document".to_string()))?;
     let manual = ensure_mapping(manual, "manual root")?;
 
@@ -959,20 +1031,20 @@ pub fn validate_yaml_with_schema<P: AsRef<Path>>(yaml: &str, schema_path: P) -> 
 }
 
 pub fn validate_yaml_with_schema_str(yaml: &str, schema_source: &str) -> Result<()> {
-    let docs = YamlLoader::load_from_str(yaml)
-        .map_err(|err| MandateError::Yaml(err.to_string()))?;
+    let docs =
+        YamlLoader::load_from_str(yaml).map_err(|err| MandateError::Yaml(err.to_string()))?;
     let document = docs
-        .get(0)
+        .first()
         .ok_or_else(|| MandateError::Yaml("empty yaml document".to_string()))?;
-    let schema_docs = YamlLoader::load_from_str(&schema_source)
+    let schema_docs = YamlLoader::load_from_str(schema_source)
         .map_err(|err| MandateError::Schema(err.to_string()))?;
     let schema_yaml = schema_docs
-        .get(0)
+        .first()
         .ok_or_else(|| MandateError::Schema("empty schema document".to_string()))?;
     let schema_json = yaml_to_json(schema_yaml);
     let instance_json = yaml_to_json(document);
-    let validator = validator_for(&schema_json)
-        .map_err(|err| MandateError::Schema(err.to_string()))?;
+    let validator =
+        validator_for(&schema_json).map_err(|err| MandateError::Schema(err.to_string()))?;
     if let Err(error) = validator.validate(&instance_json) {
         return Err(MandateError::Schema(error.to_string()));
     }
@@ -982,8 +1054,7 @@ pub fn validate_yaml_with_schema_str(yaml: &str, schema_source: &str) -> Result<
 fn dedent_body(body: &str) -> String {
     body.split('\n')
         .map(|line| {
-            if line.starts_with("  ") {
-                let remainder = &line[2..];
+            if let Some(remainder) = line.strip_prefix("  ") {
                 if remainder
                     .chars()
                     .next()
@@ -1035,10 +1106,7 @@ fn yaml_value_to_string(value: &Yaml) -> String {
         Yaml::Real(value) => value.clone(),
         Yaml::String(value) => value.clone(),
         Yaml::Array(values) => {
-            let items = values
-                .iter()
-                .map(yaml_value_to_string)
-                .collect::<Vec<_>>();
+            let items = values.iter().map(yaml_value_to_string).collect::<Vec<_>>();
             format!("[{}]", items.join(", "))
         }
         Yaml::Hash(map) => {
@@ -1285,7 +1353,10 @@ See [example](https://example.com).
     #[test]
     fn map_get_sequence_errors_on_non_sequence() {
         let mut map = Hash::new();
-        map.insert(Yaml::String("entries".to_string()), Yaml::String("nope".to_string()));
+        map.insert(
+            Yaml::String("entries".to_string()),
+            Yaml::String("nope".to_string()),
+        );
         let err = map_get_sequence(&map, "entries").expect_err("expected error");
         match err {
             MandateError::Yaml(msg) => assert!(msg.contains("expected sequence")),
