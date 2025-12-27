@@ -42,4 +42,4 @@ targets = [
 tap = "claylo/homebrew-brew"
 publish-jobs = ["homebrew"]
 include = ["dist/share"]
-github-build-setup = "dist-build-setup.yml"
+github-build-setup = "../dist-build-setup.yml"

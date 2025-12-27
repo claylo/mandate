@@ -61,7 +61,7 @@ jobs:
       - name: Install nextest
         uses: ./.github/actions/setup-cargo-tools
         with:
-          tools: cargo-nextest
+          binstall-tools: cargo-nextest
 
       - name: nextest
         run: cargo nextest run --profile ci
