@@ -1,0 +1,55 @@
+manpage_intro: |
+  # mandate(1) -- Convert Markdown or YAML manuals into roff manpages
+
+body: |
+  ## SYNOPSIS
+
+  **mandate** -i <input> -p <program> -s <section> -t <title> [options]
+
+  ## DESCRIPTION
+
+  Mandate converts Markdown or YAML-with-Markdown into roff manpages.
+  Use YAML input to model structured manuals, or provide Markdown directly.
+  It will not write the docs for you, but it will make them look official.
+
+  ## INPUT
+
+  - `manual.md` or `manual.markdown` is treated as Markdown.
+  - `manual.yml` or `manual.yaml` is treated as YAML.
+  - `-` reads from stdin and auto-detects format.
+
+  ## OPTIONS
+
+  - `-i, --input` path to `manual.yml` or `manual.md` (use `-` for stdin)
+  - `-p, --program` program name
+  - `-s, --section` man section (default: `1`)
+  - `-t, --title` manpage title
+  - `-m, --manual-section` manual section label (optional)
+  - `--source` source string (optional)
+  - `-o, --output` output file path (default: stdout)
+  - `--validate` validate YAML input against the built-in schema
+  - `--schema` path to an alternate schema to use with `--validate`
+
+  ## EXAMPLES
+
+  Generate a manpage from Markdown:
+
+  ```
+  echo '# mytool(1) -- Example tool' | mandate -i - -p mytool -s 1 -t "Mytool Manual"
+  ```
+
+  Generate a manpage from YAML:
+
+  ```
+  mandate -i manual.yml -p mytool -s 1 -t "Mytool Manual" -o mytool.1
+  ```
+
+  ## BUGS
+
+  Likely. Report them or discuss them at:
+
+      https://github.com/claylo/mandate/issues
+
+  ## Author
+
+  Clay Loveless `<clay@loveless.net>`

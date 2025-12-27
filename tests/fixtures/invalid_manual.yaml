@@ -1,0 +1,8 @@
+headline: "mandate(1)"
+body:
+  - not
+  - a
+  - string
+manpage_intro: "Mandate intro."
+manpage_epilogue: "Mandate epilogue."
+sections: "not a list"

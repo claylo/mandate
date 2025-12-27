@@ -1,0 +1,7 @@
+headline: "mandate(1)"
+body: "Mandate example body."
+manpage_intro: "Mandate intro."
+manpage_epilogue: "Mandate epilogue."
+sections:
+  - title: "NAME"
+    body: "mandate - example tool"
