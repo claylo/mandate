@@ -1,0 +1,54 @@
+name: Bump Version
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    tags-ignore:
+      - '*'
+
+permissions:
+  contents: write
+
+jobs:
+  bump:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8  # v6.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Rust toolchain
+        uses: dtolnay/rust-toolchain@f7ccc83f9ed1e5b9c81d8a67d7ad1a747e22a561
+        with:
+          toolchain: stable
+
+      - name: Rust cache
+        uses: ./.github/actions/setup-rust-cache
+        with:
+          cache-key-suffix: bump
+          toolchain: stable
+
+      - name: Install cargo tools
+        uses: ./.github/actions/setup-cargo-tools
+        with:
+          binstall-tools: cargo-edit
+
+      - name: Semver release
+        id: release
+        uses: cocogitto/cocogitto-action@v4
+        with:
+          command: bump
+          args: --auto
+          git-user: ${{ github.actor }}
+          git-user-email: ${{ github.actor_id }}+${{ github.actor }}@users.noreply.github.com
+
+      - name: Print version
+        run: echo "${{ steps.release.outputs.version }}"
+
+      - name: Push release commit and tag
+        run: git push --follow-tags

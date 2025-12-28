@@ -1,3 +1,4 @@
+# yamllint disable-line rule:line-length
 name: 'Setup Rust Cache'
 description: 'Setup optimized caching for Rust projects'
 inputs:
@@ -46,6 +47,7 @@ runs:
       uses: actions/cache@v4
       with:
         path: target
+        # yamllint disable-line rule:line-length
         key: ${{ runner.os }}-cargo-${{ inputs.cache-key-suffix }}-${{ inputs.toolchain }}-${{ hashFiles('**/Cargo.lock') }}-${{ hashFiles('src/**/*.rs') }}
         restore-keys: |
           ${{ runner.os }}-cargo-${{ inputs.cache-key-suffix }}-${{ inputs.toolchain }}-${{ hashFiles('**/Cargo.lock') }}-
