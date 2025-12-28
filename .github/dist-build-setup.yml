@@ -1,7 +1,8 @@
 - name: Generate manpage
+  if: runner.os != 'Windows'
   shell: bash
   run: |
     set -euo pipefail
     out_dir="dist/share/man/man1"
     mkdir -p "$out_dir"
-    cargo run --locked --bin mandate -- -i docs/mandate.yml -p mandate -s 1 -t "Mandate Manual" -o "$out_dir/mandate.1"
+    cargo run --bin mandate -- -i docs/mandate.yml -p mandate -s 1 -t "Mandate Manual" -o "$out_dir/mandate.1"

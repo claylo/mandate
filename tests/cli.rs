@@ -30,6 +30,19 @@ fn mandate_bin() -> PathBuf {
     path
 }
 
+fn th_fields(roff: &str) -> Vec<String> {
+    roff.lines()
+        .find(|line| line.starts_with(".TH "))
+        .map(|line| {
+            line.split('"')
+                .skip(1)
+                .step_by(2)
+                .map(str::to_string)
+                .collect::<Vec<_>>()
+        })
+        .unwrap_or_default()
+}
+
 #[test]
 fn cli_file_input_writes_output() {
     let dir = temp_dir();
@@ -56,7 +69,12 @@ fn cli_file_input_writes_output() {
 
     assert!(status.success());
     let roff = fs::read_to_string(output).expect("read output");
-    assert!(roff.contains(".TH \"mandate\" \"1\" \"Test\""));
+    let fields = th_fields(&roff);
+    assert!(fields.len() >= 5);
+    assert_eq!(fields[0], "mandate");
+    assert_eq!(fields[1], "1");
+    assert!(!fields[2].is_empty());
+    assert_eq!(fields[4], "Test");
     assert!(roff.contains(".SH \"NAME\""));
 }
 
@@ -93,5 +111,10 @@ fn cli_stdin_input_writes_output() {
     let status = child.wait().expect("wait");
     assert!(status.success());
     let roff = fs::read_to_string(output).expect("read output");
-    assert!(roff.contains(".TH \"mandate\" \"1\" \"Test\""));
+    let fields = th_fields(&roff);
+    assert!(fields.len() >= 5);
+    assert_eq!(fields[0], "mandate");
+    assert_eq!(fields[1], "1");
+    assert!(!fields[2].is_empty());
+    assert_eq!(fields[4], "Test");
 }

@@ -13,10 +13,12 @@
 use jsonschema::validator_for;
 use pulldown_cmark::{Event, HeadingLevel, Options, Parser, Tag, TagEnd};
 use serde_json::{Map as JsonMap, Number as JsonNumber, Value as JsonValue};
+use std::env;
 use std::error::Error;
 use std::fmt;
 use std::fs;
 use std::path::Path;
+use std::time::{SystemTime, UNIX_EPOCH};
 use yaml_rust2::{Yaml, YamlLoader, yaml::Hash};
 
 pub const BUILTIN_SCHEMA: &str = include_str!("../data/manual_schema.yml");
@@ -614,23 +616,21 @@ impl RoffWriter {
     }
 
     fn write_header(&mut self, options: &ManpageOptions) {
-        let manual = options
-            .manual_section
-            .as_ref()
-            .map(|value| format!("\"{}\"", self.sanitize(value)))
-            .unwrap_or_else(|| "\"\"".to_string());
+        let manual_value = options.manual_section.as_deref().unwrap_or(&options.title);
+        let manual = format!("\"{}\"", self.sanitize(manual_value));
         let source = options
             .source
             .as_ref()
             .map(|value| format!("\"{}\"", self.sanitize(value)))
             .unwrap_or_else(|| "\"\"".to_string());
+        let date = format!("\"{}\"", manpage_date());
         let heading = format!(
-            ".TH \"{}\" \"{}\" \"{}\" {} {}",
+            ".TH \"{}\" \"{}\" {} {} {}",
             self.sanitize(&options.program),
             self.sanitize(&options.section),
-            self.sanitize(&options.title),
-            manual,
-            source
+            date,
+            source,
+            manual
         );
         self.write_cmd(&heading);
     }
@@ -927,6 +927,40 @@ impl RoffWriter {
     fn write_raw(&mut self, text: &str) {
         self.output.push_str(text);
     }
+}
+
+fn manpage_date() -> String {
+    if let Ok(value) = env::var("SOURCE_DATE_EPOCH") {
+        if let Ok(seconds) = value.parse::<i64>() {
+            return format_date_from_unix(seconds);
+        }
+    }
+
+    let seconds = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|duration| duration.as_secs() as i64)
+        .unwrap_or(0);
+    format_date_from_unix(seconds)
+}
+
+fn format_date_from_unix(seconds: i64) -> String {
+    let days = seconds.div_euclid(86_400);
+    let (year, month, day) = civil_from_days(days);
+    format!("{year:04}-{month:02}-{day:02}")
+}
+
+fn civil_from_days(days: i64) -> (i32, u32, u32) {
+    let z = days + 719_468;
+    let era = if z >= 0 { z } else { z - 146_096 } / 146_097;
+    let doe = z - era * 146_097;
+    let yoe = (doe - doe / 1_460 + doe / 36_524 - doe / 146_096) / 365;
+    let y = yoe + era * 400;
+    let doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
+    let mp = (5 * doy + 2) / 153;
+    let d = doy - (153 * mp + 2) / 5 + 1;
+    let m = mp + if mp < 10 { 3 } else { -9 };
+    let year = y + if m <= 2 { 1 } else { 0 };
+    (year as i32, m as u32, d as u32)
 }
 
 #[derive(Debug, Clone, Copy)]
