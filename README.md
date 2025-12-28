@@ -12,6 +12,7 @@ things civil.
 * [Installation](#installation)
 * [Quick start](#quick-start)
 * [Usage](#usage)
+* [Markdown handling](#markdown-handling)
 * [CLI flags](#cli-flags)
 * [Documentation](#documentation)
 * [Project status](#project-status)
@@ -20,7 +21,6 @@ things civil.
 * [License](#license)
 
 <!-- tocstop -->
-
 
 ## Features
 
@@ -78,6 +78,21 @@ Notes:
 - `manual.yml`/`manual.yaml` → YAML input.
 - `-` reads from stdin and auto-detects format.
 - `--validate` checks YAML against the embedded schema (or `--schema` override).
+
+## Markdown handling
+
+Mandate speaks CommonMark, but the roff renderer has opinions. Here are the ones you’ll actually trip over:
+
+- H1 headings become the `NAME` section and are split on ` -- `, ` - `, or ` — ` into name/description (parenthesized suffixes are trimmed).
+- H2 headings render as `.SH`, H3+ render as `.SS`.
+- Lists with a single item ending in `:` are treated as term/definition lists; following paragraphs are indented definitions until a code block interrupts them.
+- Consecutive fenced code blocks are merged into one `.nf/.fi` block to keep the roff layout tidy.
+- Soft breaks become spaces; hard breaks become newlines only inside list items (outside lists they collapse to spaces too).
+- Links keep their text, drop the URL. Images keep their alt text, drop the pixels.
+- Block quotes are flattened (no special quoting in roff).
+- Inline HTML is treated as literal text; HTML blocks become plain paragraphs.
+- Tables, footnotes, strikethrough, definition lists, metadata blocks, superscripts, and subscripts are rejected with a Markdown error.
+- Horizontal rules, task list markers, and math are ignored.
 
 ## CLI flags
 
