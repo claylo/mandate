@@ -21,61 +21,88 @@ use std::path::Path;
 use std::time::{SystemTime, UNIX_EPOCH};
 use yaml_rust2::{Yaml, YamlLoader, yaml::Hash};
 
+/// Built-in JSON schema (expressed as YAML) for manual documents.
+///
+/// Use this when you want validation without playing "fetch the schema file"
+/// from disk.
 pub const BUILTIN_SCHEMA: &str = include_str!("../data/manual_schema.yml");
 
 #[derive(Debug, Clone)]
+/// Parsed representation of a manual document.
+///
+/// It is intentionally simple: a list of blocks. No lifetimes, no magic, and
+/// absolutely no feelings about your heading hierarchy.
 pub struct Document {
     pub blocks: Vec<Block>,
 }
 
 #[derive(Debug, Clone)]
+/// Block-level elements produced by the Markdown/YAML parser.
 pub enum Block {
-    Heading {
-        level: u8,
-        content: Vec<Inline>,
-    },
+    /// A heading with a numeric level and inline content.
+    Heading { level: u8, content: Vec<Inline> },
+    /// A paragraph composed of inline nodes.
     Paragraph(Vec<Inline>),
+    /// An ordered or unordered list.
     List {
         kind: ListKind,
         items: Vec<ListItem>,
     },
-    CodeBlock {
-        text: String,
-    },
+    /// A fenced code block.
+    CodeBlock { text: String },
 }
 
 #[derive(Debug, Clone)]
+/// List variants supported by the renderer.
 pub enum ListKind {
+    /// Bullet list.
     Unordered,
+    /// Numbered list, preserving the start value from Markdown.
     Ordered { start: u64 },
 }
 
 #[derive(Debug, Clone)]
+/// A single list item containing block content.
 pub struct ListItem {
     pub blocks: Vec<Block>,
 }
 
 #[derive(Debug, Clone)]
+/// Inline-level elements produced by the Markdown parser.
 pub enum Inline {
+    /// Plain text.
     Text(String),
+    /// Inline code span.
     Code(String),
+    /// Emphasized content.
     Emphasis(Vec<Inline>),
+    /// Strong (bold) content.
     Strong(Vec<Inline>),
+    /// A link with optional title.
     Link {
         url: String,
         title: Option<String>,
         content: Vec<Inline>,
     },
+    /// A soft or hard line break.
     LineBreak(LineBreak),
 }
 
 #[derive(Debug, Clone, Copy)]
+/// How to treat a Markdown line break.
 pub enum LineBreak {
+    /// Markdown soft break (`\n`), rendered as a space.
     Soft,
+    /// Markdown hard break (`<br>` or `\\`), rendered as a newline.
     Hard,
 }
 
 #[derive(Debug, Clone)]
+/// Settings that control how roff output is labeled.
+///
+/// The output still depends on the input document, but these values set the
+/// heading metadata and section labeling. Think of them as the manpage
+/// business card.
 pub struct ManpageOptions {
     pub program: String,
     pub section: String,
@@ -85,6 +112,10 @@ pub struct ManpageOptions {
 }
 
 impl ManpageOptions {
+    /// Create a new set of manpage options.
+    ///
+    /// `manual_section` and `source` are optional; pass `None` if you prefer
+    /// the default "no comment" behavior in the header.
     pub fn new(
         program: impl Into<String>,
         section: impl Into<String>,
@@ -103,10 +134,15 @@ impl ManpageOptions {
 }
 
 #[derive(Debug)]
+/// Errors returned by Mandate conversions and validation.
 pub enum MandateError {
+    /// A feature exists only in our collective imagination.
     Unimplemented(&'static str),
+    /// Markdown parsing failed or encountered unsupported constructs.
     Markdown(String),
+    /// YAML parsing failed or found an unexpected structure.
     Yaml(String),
+    /// Schema validation failed or could not be loaded.
     Schema(String),
 }
 
@@ -123,6 +159,7 @@ impl fmt::Display for MandateError {
 
 impl Error for MandateError {}
 
+/// Convenience result type for Mandate operations.
 pub type Result<T> = std::result::Result<T, MandateError>;
 
 #[derive(Debug, Default)]
@@ -194,6 +231,10 @@ enum Frame {
     },
 }
 
+/// Parse CommonMark into a `Document` AST.
+///
+/// Unsupported constructs (tables, footnotes, etc.) return a `Markdown` error
+/// instead of politely pretending they never existed.
 pub fn parse_markdown(markdown: &str) -> Result<Document> {
     let parser = Parser::new_ext(markdown, Options::empty());
     parse_events(parser)
@@ -968,11 +1009,19 @@ enum ParentTag {
     ListItem,
 }
 
+/// Convert Markdown directly to roff with the provided options.
+///
+/// This is the "just do the thing" entry point for Markdown inputs.
 pub fn convert_markdown_to_roff(markdown: &str, options: &ManpageOptions) -> Result<String> {
     let document = parse_markdown(markdown)?;
     render_roff(&document, options)
 }
 
+/// Convert YAML manual data into Markdown.
+///
+/// The YAML schema expects fields like `manpage_intro`, `body`, `sections`,
+/// `entries`, and `examples`. Example blocks are rendered as a simple
+/// transcript, because humans like narratives.
 pub fn convert_yaml_to_markdown(_yaml: &str) -> Result<String> {
     let docs =
         YamlLoader::load_from_str(_yaml).map_err(|err| MandateError::Yaml(err.to_string()))?;
@@ -1041,16 +1090,22 @@ pub fn convert_yaml_to_markdown(_yaml: &str) -> Result<String> {
     Ok(out)
 }
 
+/// Convert YAML manual data directly to roff.
 pub fn convert_yaml_to_roff(yaml: &str, options: &ManpageOptions) -> Result<String> {
     let markdown = convert_yaml_to_markdown(yaml)?;
     convert_markdown_to_roff(&markdown, options)
 }
 
+/// Parse YAML manual data into a `Document` AST.
+///
+/// This is useful when you want to inspect or post-process the structure
+/// before rendering.
 pub fn parse_yaml_to_document(yaml: &str) -> Result<Document> {
     let markdown = convert_yaml_to_markdown(yaml)?;
     parse_markdown(&markdown)
 }
 
+/// Render a `Document` to roff using the provided manpage options.
 pub fn render_roff(document: &Document, options: &ManpageOptions) -> Result<String> {
     let mut writer = RoffWriter::new();
     writer.write_header(options);
@@ -1058,12 +1113,17 @@ pub fn render_roff(document: &Document, options: &ManpageOptions) -> Result<Stri
     Ok(writer.finish())
 }
 
+/// Validate YAML input against a schema loaded from the filesystem.
 pub fn validate_yaml_with_schema<P: AsRef<Path>>(yaml: &str, schema_path: P) -> Result<()> {
     let schema_source = fs::read_to_string(schema_path.as_ref())
         .map_err(|err| MandateError::Schema(err.to_string()))?;
     validate_yaml_with_schema_str(yaml, &schema_source)
 }
 
+/// Validate YAML input against a schema string.
+///
+/// For the built-in schema, pass [`BUILTIN_SCHEMA`]. It's cheaper than a
+/// filesystem read and less likely to wander off.
 pub fn validate_yaml_with_schema_str(yaml: &str, schema_source: &str) -> Result<()> {
     let docs =
         YamlLoader::load_from_str(yaml).map_err(|err| MandateError::Yaml(err.to_string()))?;
