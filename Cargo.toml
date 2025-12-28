@@ -43,3 +43,12 @@ publish-jobs = ["homebrew"]
 include = ["dist/share"]
 github-build-setup = "../dist-build-setup.yml"
 pr-run-mode = "upload"
+
+github-release = "auto"
+
+cargo-auditable = true
+
+[workspace.metadata.dist.github-action-commits]
+"actions/checkout" = "v6"
+"actions/upload-artifact" = "v6"
+"actions/download-artifact" = "v7"
