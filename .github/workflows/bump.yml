@@ -22,24 +22,51 @@ jobs:
           fetch-depth: 0
           persist-credentials: true
 
+      - name: Check bump eligibility
+        id: bump-check
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if git describe --tags --abbrev=0 >/dev/null 2>&1; then
+            base="$(git describe --tags --abbrev=0)"
+            range="${base}..HEAD"
+          else
+            range="HEAD"
+          fi
+
+          log="$(git log --no-merges --format=%B "$range")"
+
+          if printf '%s\n' "$log" | grep -Eq '^(feat|fix|perf)(\([^)]+\))?(!)?:' \
+            || printf '%s\n' "$log" | grep -Eq '^[a-zA-Z0-9_-]+(\([^)]+\))?!:' \
+            || printf '%s\n' "$log" | grep -Eq 'BREAKING CHANGE'; then
+            echo "bumpable=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "bumpable=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Rust toolchain
+        if: steps.bump-check.outputs.bumpable == 'true'
         uses: dtolnay/rust-toolchain@f7ccc83f9ed1e5b9c81d8a67d7ad1a747e22a561
         with:
           toolchain: stable
 
       - name: Rust cache
+        if: steps.bump-check.outputs.bumpable == 'true'
         uses: ./.github/actions/setup-rust-cache
         with:
           cache-key-suffix: bump
           toolchain: stable
 
       - name: Install cargo tools
+        if: steps.bump-check.outputs.bumpable == 'true'
         uses: ./.github/actions/setup-cargo-tools
         with:
           binstall-tools: cargo-edit
 
       - name: Semver release
         id: release
+        if: steps.bump-check.outputs.bumpable == 'true'
         uses: cocogitto/cocogitto-action@v4
         with:
           command: bump
@@ -48,7 +75,13 @@ jobs:
           git-user-email: ${{ github.actor_id }}+${{ github.actor }}@users.noreply.github.com
 
       - name: Print version
+        if: steps.bump-check.outputs.bumpable == 'true'
         run: echo "${{ steps.release.outputs.version }}"
 
       - name: Push release commit and tag
+        if: steps.bump-check.outputs.bumpable == 'true'
         run: git push --follow-tags
+
+      - name: Skip bump (no releasable commits)
+        if: steps.bump-check.outputs.bumpable != 'true'
+        run: echo "No bumpable commits found; skipping."
